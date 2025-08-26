@@ -30,13 +30,20 @@ def load_json(file, default):
 
 def save_json(file,data):
     with open(file,"w") as f:
-        json.dump(data,f)
+        json.dump(data,f, indent=4)
 
-coins = load_json(USER_COINS_FILE,[])
-settings = load_json(SETTINGS_FILE,{"rsi_buy":20,"rsi_sell":80,"signal_validity_min":15})
-last_signals = load_json(LAST_SIGNAL_FILE,{})
-muted_coins = load_json(MUTED_COINS_FILE,[])
-coin_intervals = load_json(COIN_INTERVALS_FILE,{})
+# Load JSON files safely
+coins = load_json(USER_COINS_FILE, [])
+if not isinstance(coins, list):
+    coins = []
+
+settings = load_json(SETTINGS_FILE, {"rsi_buy":20,"rsi_sell":80,"signal_validity_min":15})
+last_signals = load_json(LAST_SIGNAL_FILE, {})
+muted_coins = load_json(MUTED_COINS_FILE, [])
+if not isinstance(muted_coins, list):
+    muted_coins = []
+
+coin_intervals = load_json(COIN_INTERVALS_FILE, {})
 
 # ================= TECHNICAL ANALYSIS =================
 def get_klines(symbol, interval="15m", limit=100):
@@ -78,7 +85,7 @@ def macd(data, fast=12, slow=26, signal=9):
 def calculate_atr(closes, period=14):
     if len(closes) < period + 1:
         return 0
-    high_low = np.diff(closes)  # approximate ATR
+    high_low = np.diff(closes)
     return np.mean(np.abs(high_low[-period:]))
 
 def ultra_signal(symbol, interval):
@@ -109,15 +116,16 @@ def ultra_signal(symbol, interval):
     sl = entry - atr if r < settings["rsi_buy"] else entry + atr
     tp1 = entry + atr*1.5 if r < settings["rsi_buy"] else entry - atr*1.5
     tp2 = entry + atr*3 if r < settings["rsi_buy"] else entry - atr*3
-    confidence = "High" if (r<settings["rsi_buy"] and m[-1]>s[-1] and last_close>e and last_vol>np.mean(volumes)) or                        (r>settings["rsi_sell"] and m[-1]<s[-1] and last_close<e and last_vol>np.mean(volumes)) else "Medium"
+    confidence = "High" if (r<settings["rsi_buy"] and m[-1]>s[-1] and last_close>e and last_vol>np.mean(volumes)) or \
+                       (r>settings["rsi_sell"] and m[-1]<s[-1] and last_close<e and last_vol>np.mean(volumes)) else "Medium"
 
     strong_buy = r < settings["rsi_buy"] and m[-1] > s[-1] and last_close > e and last_vol > np.mean(volumes)
     strong_sell = r > settings["rsi_sell"] and m[-1] < s[-1] and last_close < e and last_vol > np.mean(volumes)
 
     if strong_buy:
-        return f"🟢 ULTRA STRONG BUY | {symbol} | {interval}\nEntry: {entry:.4f}\nSL: {sl:.4f}\nTP1: {tp1:.4f}\nTP2: {tp2:.4f}\nLeverage: {leverage}x\nConfidence: {confidence}"
+        return f"🟢 ULTRA STRONG BUY | {symbol} | {interval}\\nEntry: {entry:.4f}\\nSL: {sl:.4f}\\nTP1: {tp1:.4f}\\nTP2: {tp2:.4f}\\nLeverage: {leverage}x\\nConfidence: {confidence}"
     elif strong_sell:
-        return f"🔴 ULTRA STRONG SELL | {symbol} | {interval}\nEntry: {entry:.4f}\nSL: {sl:.4f}\nTP1: {tp1:.4f}\nTP2: {tp2:.4f}\nLeverage: {leverage}x\nConfidence: {confidence}"
+        return f"🔴 ULTRA STRONG SELL | {symbol} | {interval}\\nEntry: {entry:.4f}\\nSL: {sl:.4f}\\nTP1: {tp1:.4f}\\nTP2: {tp2:.4f}\\nLeverage: {leverage}x\\nConfidence: {confidence}"
     else:
         return None
 
